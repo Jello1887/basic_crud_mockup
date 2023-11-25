@@ -1,0 +1,9 @@
+RewriteEngine On
+RewriteBase / # Adjust if your application is in a subdirectory
+
+# Don't apply the rule if the requested item is a real file or directory
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+
+# Rewrite rule to remove .php; handle URLs with or without a trailing slash
+RewriteRule ^([^\.]+)/?$ $1.php [NC,L]
