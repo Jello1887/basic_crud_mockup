@@ -1,11 +1,11 @@
 <?php
 $pageTitle = 'Add User';
-include 'includes/header.php';
+include 'includes/header_session.php';
 ?>
 <body>
     <div class="oj-form-wrap">
     <h1>User Registration</h1>
-    <form method="post" action="register_user.php">
+    <form method="post" action="register_user.php" enctype="multipart/form-data">
     <!-- First Name Field -->    
     <label for="first_name">First Name:</label>
     <input type="text" id="first_name" name="first_name" required><br>
@@ -81,12 +81,20 @@ include 'includes/header.php';
     <label for="password">Password:</label>
     <input type="password" id="password" name="password" required><br>
 
+    <!-- Picture Field -->
+    <label for="profile_picture">Profile Picture:</label>
+    <input type="file" name="profile_picture" id="profile_picture" accept="image/*"><br>
+
     <!-- Submit Button -->
     <input type="submit" value="Submit">
 </form>
 
 </div>
 
+</body>
+
+
+</html>
 </body>
 
 
