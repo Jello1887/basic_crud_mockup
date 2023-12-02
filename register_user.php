@@ -2,8 +2,7 @@
 $pageTitle = 'Register User';
 include 'includes/header.php';
 require 'connect_db.php';
-?>
-<?php
+
 // Check if form data is submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Retrieve form data
@@ -25,12 +24,50 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         header("Location: add_user_failed.php");
         exit();
     } else {
+       // Handle File Upload
+    $profilePicPath = '';
+    if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] == 0) {
+        $targetDir = "uploads/";
+        $fileName = basename($_FILES['profile_picture']['name']);
+        $targetFilePath = $targetDir . time() . '_' . $fileName;  // Adding a timestamp for uniqueness
+        $fileType = pathinfo($targetFilePath, PATHINFO_EXTENSION);
+
+        // Check if image file is an actual image or fake image
+        $check = getimagesize($_FILES['profile_picture']['tmp_name']);
+        if($check === false) {
+            die("File is not an image.");
+        }
+
+        // Check file size (e.g., 5MB limit)
+        if ($_FILES['profile_picture']['size'] > 5000000) {
+            die("Sorry, your file is too large. Maximum allowed size is 5MB.");
+        }
+
+        // Allow certain file formats
+        $allowTypes = array('jpg', 'png', 'jpeg', 'gif');
+        if (!in_array($fileType, $allowTypes)) {
+            die("Sorry, only JPG, JPEG, PNG & GIF files are allowed.");
+        }
+
+        // Check if file already exists
+        if (file_exists($targetFilePath)) {
+            die("Sorry, file already exists. Please try again.");
+        }
+
+        // Try to upload file
+        if (!move_uploaded_file($_FILES['profile_picture']['tmp_name'], $targetFilePath)) {
+            die("Sorry, there was an error uploading your file.");
+        }
+
+        $profilePicPath = $targetFilePath;
+    }
+
         // Hash the password
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-        // Prepare a statement to insert new user
-        $insertQuery = $connection->prepare("INSERT INTO USER (email_address, password, first_name, last_name, city, state) VALUES (?, ?, ?, ?, ?, ?)");
-        $insertQuery->bind_param("ssssss", $email, $hashedPassword, $firstName, $lastName, $city, $state);
+        // Prepare a statement to insert new user with profile picture
+        $insertQuery = $connection->prepare("INSERT INTO USER (email_address, password, first_name, last_name, city, state, profile_picture) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $insertQuery->bind_param("sssssss", $email, $hashedPassword, $firstName, $lastName, $city, $state, $profilePicPath);
 
         if ($insertQuery->execute()) {
             // Redirect to add_user_success.php after successful insertion
@@ -45,3 +82,4 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     echo "Invalid request.";
 }
 ?>
+
