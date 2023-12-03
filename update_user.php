@@ -13,40 +13,98 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $city = filter_var($_POST['city'], FILTER_SANITIZE_STRING);
     $state = filter_var($_POST['state'], FILTER_SANITIZE_STRING);
 
-    // Prepare the SQL statement
+    // Initialize variables for the profile picture
+    $profilePicPath = '';
+    $oldProfilePicPath = '';
+
+    // Initialize the SQL query and types string
     $query = "UPDATE USER SET first_name = ?, last_name = ?, email_address = ?, role = ?, city = ?, state = ?";
-    $types = "ssssss"; // Data types for each parameter
+    $types = "ssssss";
 
     // Check if the password needs to be updated
     if (!empty($password)) {
         $password = password_hash($password, PASSWORD_DEFAULT); // Hash the new password
         $query .= ", password = ?";
-        $types .= "s"; // Add a string data type for the password
+        $types .= "s";
+    }
+
+    // Check if a new profile picture is uploaded
+    if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] == 0) {
+        $targetDir = "uploads/";
+        $fileName = basename($_FILES['profile_picture']['name']);
+        $targetFilePath = $targetDir . time() . '_' . $fileName; // Unique file name
+        $fileType = pathinfo($targetFilePath, PATHINFO_EXTENSION);
+
+        // Check if file is an image
+        $check = getimagesize($_FILES['profile_picture']['tmp_name']);
+        if ($check === false) {
+            die("File is not an image.");
+        }
+
+        // Check file size (e.g., 5MB limit)
+        if ($_FILES['profile_picture']['size'] > 5000000) {
+            die("Sorry, your file is too large.");
+        }
+
+        // Allow certain file formats
+        if (!in_array($fileType, ['jpg', 'png', 'jpeg', 'gif'])) {
+            die("Sorry, only JPG, JPEG, PNG & GIF files are allowed.");
+        }
+
+        // Get the old profile picture path from the database
+        $selectQuery = $connection->prepare("SELECT profile_picture FROM USER WHERE user_id = ?");
+        $selectQuery->bind_param("i", $userId);
+        $selectQuery->execute();
+        $result = $selectQuery->get_result();
+        if ($row = $result->fetch_assoc()) {
+            $oldProfilePicPath = $row['profile_picture'];
+        }
+
+        // Try to upload the new file
+        if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $targetFilePath)) {
+            $profilePicPath = $targetFilePath;
+        } else {
+            die("Sorry, there was an error uploading your file.");
+        }
+    }
+
+    // Append profile picture to the query
+    if (!empty($profilePicPath)) {
+        $query .= ", profile_picture = ?";
+        $types .= "s";
     }
 
     $query .= " WHERE user_id = ?";
-    $types .= "i"; // Add an integer data type for the user_id
+    $types .= "i";
 
     $stmt = $connection->prepare($query);
-    
-    // Bind parameters based on whether the password is updated
-    if (!empty($password)) {
+
+    // Bind parameters based on whether the password and profile picture are updated
+    if (!empty($password) && !empty($profilePicPath)) {
+        $stmt->bind_param($types, $firstname, $lastname, $email, $role, $city, $state, $password, $profilePicPath, $userId);
+    } elseif (!empty($password)) {
         $stmt->bind_param($types, $firstname, $lastname, $email, $role, $city, $state, $password, $userId);
+    } elseif (!empty($profilePicPath)) {
+        $stmt->bind_param($types, $firstname, $lastname, $email, $role, $city, $state, $profilePicPath, $userId);
     } else {
         $stmt->bind_param($types, $firstname, $lastname, $email, $role, $city, $state, $userId);
     }
 
-    // Execute the query and check for successful update
+    // Execute the query
     if ($stmt->execute()) {
-        header("Location: user_list.php"); // Redirect to user list on success
-        exit;
+        // Delete the old profile picture if a new one was uploaded
+        if (!empty($profilePicPath) && !empty($oldProfilePicPath) && file_exists($oldProfilePicPath)) {
+            unlink($oldProfilePicPath);
+        }
+
+        header("Location: user_list.php"); // Redirect on success
     } else {
-        header("Location: update_user_failed.php"); // Redirect to error page on failure
-        exit;
+        header("Location: update_user_failed.php"); // Redirect on failure
     }
+    exit;
 } else {
-    // Redirect to the update form if the script is accessed without a POST request
-    header("Location: update_user.php");
+    header("Location: user_list.php"); // Redirect if not a POST request
     exit;
 }
 ?>
+
