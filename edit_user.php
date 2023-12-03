@@ -29,7 +29,7 @@ if (isset($_GET['id'])) {
 <body>
 <div class="oj-form-wrap">
 <?php if (isset($userData)): ?>
-    <form action="update_user.php" method="post">
+    <form action="update_user.php" method="post" enctype="multipart/form-data">
         <input type="hidden" name="user_id" value="<?php echo htmlspecialchars($userData['user_id']); ?>">
 
         <label for="firstname">First Name:</label>
@@ -108,7 +108,12 @@ if (isset($_GET['id'])) {
             <option value="WY" <?php echo $userData['state'] == 'WY' ? 'selected' : ''; ?>>Wyoming</option>
         </select><br>
         <!--State Field End -->
-            <!-- Submit Button -->
+
+        <!-- Profile Picture Upload Field -->
+    <label for="profile_picture">Profile Picture:</label>
+    <input type="file" name="profile_picture" id="profile_picture" accept="image/*"><br>
+
+        <!-- Submit Button -->
     <input type="submit" value="Update User">
     </form>
 <?php endif; ?>
